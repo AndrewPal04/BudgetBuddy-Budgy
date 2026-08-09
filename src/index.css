@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-espresso: #6f4e37;
+  --color-caramel: #a9744f;
+  --color-latte: #f5ebe0;
+  --color-cream: #fffaf5;
+}
+
+body {
+  @apply bg-white text-espresso;
+}
