@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 const NAV_LINKS = [
   { to: '/savings', label: 'Savings' },
@@ -15,6 +16,7 @@ const linkClasses = ({ isActive }: { isActive: boolean }) =>
 
 function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { user, signOut } = useAuth()
 
   return (
     <div className="min-h-screen bg-white">
@@ -30,6 +32,13 @@ function Layout() {
                 {link.label}
               </NavLink>
             ))}
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="ml-2 rounded-full border border-latte px-4 py-2 text-sm font-medium text-espresso transition-colors hover:bg-latte"
+            >
+              Sign out
+            </button>
           </nav>
 
           <button
@@ -61,6 +70,16 @@ function Layout() {
                 {link.label}
               </NavLink>
             ))}
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false)
+                void signOut()
+              }}
+              className="rounded-full border border-latte px-4 py-2 text-left text-sm font-medium text-espresso transition-colors hover:bg-latte"
+            >
+              Sign out{user?.email ? ` (${user.email})` : ''}
+            </button>
           </nav>
         )}
       </header>
