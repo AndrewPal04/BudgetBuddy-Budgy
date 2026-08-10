@@ -1,8 +1,12 @@
+import { Link } from 'react-router-dom'
 import StatTile from '../components/StatTile'
 import CategoryPieChart from '../components/CategoryPieChart'
+import SavingsTrendChart from '../components/SavingsTrendChart'
 import { useIncome } from '../hooks/useIncome'
 import { useExpenses } from '../hooks/useExpenses'
+import { useSavingsSnapshots } from '../hooks/useSavingsSnapshots'
 import { monthlyExpenseTotal, monthlyIncomeTotal, normalizeIncomeToMonthly } from '../lib/budgetMath'
+import { buildSavingsProjection } from '../lib/savingsMath'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
@@ -18,11 +22,16 @@ function ChartSkeleton() {
 function Home() {
   const { entries: income, loading: incomeLoading } = useIncome()
   const { entries: expenses, loading: expensesLoading } = useExpenses()
+  const { snapshots, loading: snapshotsLoading } = useSavingsSnapshots()
 
   const loading = incomeLoading || expensesLoading
   const monthlyIncome = monthlyIncomeTotal(income)
   const amountSpent = monthlyExpenseTotal(expenses)
   const amountSaved = monthlyIncome - amountSpent
+
+  const savingsLoading = loading || snapshotsLoading
+  const baseline = snapshots.length > 0 ? snapshots[snapshots.length - 1].amount : 0
+  const projection = buildSavingsProjection(baseline, amountSaved)
 
   return (
     <div className="flex flex-col gap-8">
@@ -65,6 +74,25 @@ function Home() {
               emptyMessage="No income yet — add a source to see the breakdown."
             />
           </>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-latte bg-cream p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-espresso">Savings trend</h2>
+          <Link
+            to="/savings"
+            className="text-sm font-medium text-caramel underline-offset-2 hover:underline"
+          >
+            View savings goals →
+          </Link>
+        </div>
+        {savingsLoading ? (
+          <div className="mt-4 h-72 animate-pulse rounded-xl bg-latte" />
+        ) : (
+          <div className="mt-2">
+            <SavingsTrendChart data={projection} />
+          </div>
         )}
       </div>
     </div>
