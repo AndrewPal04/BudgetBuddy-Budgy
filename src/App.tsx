@@ -6,10 +6,11 @@ import Expenses from './pages/Expenses'
 import Income from './pages/Income'
 import Tips from './pages/Tips'
 import AuthPage from './pages/AuthPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import { useAuth } from './hooks/useAuth'
 
 function App() {
-  const { user, loading } = useAuth()
+  const { user, loading, passwordRecovery } = useAuth()
 
   if (loading) {
     return (
@@ -17,6 +18,10 @@ function App() {
         Loading…
       </div>
     )
+  }
+
+  if (passwordRecovery) {
+    return <ResetPasswordPage />
   }
 
   if (!user) {

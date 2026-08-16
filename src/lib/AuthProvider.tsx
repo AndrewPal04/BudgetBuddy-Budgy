@@ -9,6 +9,7 @@ const NOT_CONFIGURED_ERROR =
 function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(isSupabaseConfigured)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   useEffect(() => {
     if (!supabase) return
@@ -18,8 +19,11 @@ function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     })
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession)
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true)
+      }
     })
 
     return () => subscription.subscription.unsubscribe()
@@ -30,6 +34,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       session,
       loading,
+      passwordRecovery,
       async signIn(email, password) {
         if (!supabase) return { error: NOT_CONFIGURED_ERROR }
         const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -44,8 +49,23 @@ function AuthProvider({ children }: { children: ReactNode }) {
         if (!supabase) return
         await supabase.auth.signOut()
       },
+      async requestPasswordReset(email) {
+        if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        })
+        return { error: error?.message ?? null }
+      },
+      async updatePassword(newPassword) {
+        if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+        const { error } = await supabase.auth.updateUser({ password: newPassword })
+        return { error: error?.message ?? null }
+      },
+      completePasswordRecovery() {
+        setPasswordRecovery(false)
+      },
     }),
-    [session, loading],
+    [session, loading, passwordRecovery],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
