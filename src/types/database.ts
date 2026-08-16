@@ -1,6 +1,17 @@
 export type IncomeFrequency = 'monthly' | 'biweekly'
 export type ExpenseType = 'one_time' | 'subscription'
 export type BillingCycle = 'monthly' | 'yearly'
+export type ExpenseCategory =
+  | 'housing'
+  | 'groceries'
+  | 'transportation'
+  | 'utilities'
+  | 'subscriptions'
+  | 'entertainment'
+  | 'dining_out'
+  | 'health'
+  | 'shopping'
+  | 'other'
 
 // NOTE: these are `type` aliases, not `interface`s, deliberately — the Supabase
 // client's generic default resolution fails to extend `GenericSchema` (and silently
@@ -22,6 +33,7 @@ export type ExpenseRow = {
   amount: number
   type: ExpenseType
   billing_cycle: BillingCycle | null
+  category: ExpenseCategory
   created_at: string
 }
 
@@ -40,6 +52,14 @@ export type SavingsSnapshotRow = {
   user_id: string
   amount: number
   recorded_at: string
+}
+
+export type BudgetLimitRow = {
+  id: string
+  user_id: string
+  category: ExpenseCategory
+  monthly_limit: number
+  created_at: string
 }
 
 export interface Database {
@@ -67,6 +87,12 @@ export interface Database {
         Row: SavingsSnapshotRow
         Insert: Omit<SavingsSnapshotRow, 'id'> & { id?: string }
         Update: Partial<Omit<SavingsSnapshotRow, 'id' | 'user_id'>>
+        Relationships: []
+      }
+      budget_limits: {
+        Row: BudgetLimitRow
+        Insert: Omit<BudgetLimitRow, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<Omit<BudgetLimitRow, 'id' | 'user_id'>>
         Relationships: []
       }
     }

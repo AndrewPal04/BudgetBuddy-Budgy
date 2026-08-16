@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { ExpenseInput } from '../hooks/useExpenses'
+import { CATEGORY_LABELS, CATEGORY_VALUES } from '../lib/expenseCategories'
 
 const expenseSchema = z
   .object({
@@ -10,6 +11,7 @@ const expenseSchema = z
     amount: z.coerce.number().positive('Amount must be greater than 0'),
     type: z.enum(['one_time', 'subscription']),
     billing_cycle: z.enum(['monthly', 'yearly']).optional(),
+    category: z.enum(CATEGORY_VALUES),
   })
   .superRefine((data, ctx) => {
     if (data.type === 'subscription' && !data.billing_cycle) {
@@ -29,6 +31,7 @@ export interface ExpenseFormDefaults {
   amount: number
   type: ExpenseFormValues['type']
   billing_cycle?: ExpenseFormValues['billing_cycle']
+  category: ExpenseFormValues['category']
 }
 
 interface ExpenseFormProps {
@@ -48,7 +51,12 @@ const BILLING_CYCLE_OPTIONS = [
   { value: 'yearly', label: 'Yearly' },
 ] as const
 
-const EMPTY_DEFAULTS: ExpenseFormDefaults = { name: '', amount: 0, type: 'one_time' }
+const EMPTY_DEFAULTS: ExpenseFormDefaults = {
+  name: '',
+  amount: 0,
+  type: 'one_time',
+  category: 'other',
+}
 
 function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: ExpenseFormProps) {
   const {
@@ -77,6 +85,7 @@ function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: Expense
       amount: values.amount,
       type: values.type,
       billing_cycle: values.type === 'subscription' ? (values.billing_cycle ?? null) : null,
+      category: values.category,
     })
     if (result.error) {
       setError('root', { message: result.error })
@@ -114,6 +123,23 @@ function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: Expense
           className="rounded-lg border border-latte bg-white px-3 py-2 text-espresso outline-none focus:border-caramel"
         />
         {errors.amount && <p className="text-sm text-red-600">{errors.amount.message}</p>}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="category" className="text-sm font-medium text-espresso">
+          Category
+        </label>
+        <select
+          id="category"
+          {...register('category')}
+          className="rounded-lg border border-latte bg-white px-3 py-2 text-espresso outline-none focus:border-caramel"
+        >
+          {CATEGORY_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {CATEGORY_LABELS[value]}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-col gap-1">

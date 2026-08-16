@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import ErrorBoundary from './ErrorBoundary'
 
 const NAV_LINKS = [
   { to: '/savings', label: 'Savings' },
@@ -17,6 +18,7 @@ const linkClasses = ({ isActive }: { isActive: boolean }) =>
 function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { user, signOut } = useAuth()
+  const location = useLocation()
 
   return (
     <div className="min-h-screen bg-white">
@@ -85,7 +87,14 @@ function Layout() {
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-8">
-        <Outlet />
+        <ErrorBoundary
+          key={location.pathname}
+          fullScreen={false}
+          title="This page hit a snag"
+          message="Something broke on this page. Try reloading, or head back to another tab using the nav above."
+        >
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   )

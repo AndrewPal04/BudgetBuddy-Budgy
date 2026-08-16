@@ -1,13 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
-import type { BillingCycle, ExpenseRow, ExpenseType } from '../types/database'
+import type { BillingCycle, ExpenseCategory, ExpenseRow, ExpenseType } from '../types/database'
 
 export interface ExpenseInput {
   name: string
   amount: number
   type: ExpenseType
   billing_cycle: BillingCycle | null
+  category: ExpenseCategory
 }
 
 interface MutationResult {
