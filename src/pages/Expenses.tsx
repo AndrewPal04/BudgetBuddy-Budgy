@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ExpenseForm from '../components/ExpenseForm'
 import BudgetLimitForm from '../components/BudgetLimitForm'
+import CategoryPieChart from '../components/CategoryPieChart'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useExpenses, type ExpenseInput } from '../hooks/useExpenses'
 import { useBudgetLimits } from '../hooks/useBudgetLimits'
@@ -102,6 +103,16 @@ function Expenses() {
     await handleDeleteLimit(confirmDeleteLimit.id)
     setConfirmDeleteLimit(null)
   }
+
+  const budgetPieItems = limits.map((limit) => {
+    const spend = monthlyCategorySpend(entries, limit.category)
+    const percentUsed = limit.monthly_limit > 0 ? Math.round((spend / limit.monthly_limit) * 100) : 0
+    return {
+      name: CATEGORY_LABELS[limit.category],
+      value: limit.monthly_limit,
+      detail: `${currencyFormatter.format(spend)} spent (${percentUsed}%)`,
+    }
+  })
 
   return (
     <div className="flex flex-col gap-8">
@@ -223,6 +234,19 @@ function Expenses() {
             </button>
           )}
         </div>
+
+        {limitsLoading || loading ? (
+          <div className="rounded-2xl border border-latte bg-cream p-6">
+            <div className="h-5 w-40 animate-pulse rounded bg-latte" />
+            <div className="mx-auto mt-6 h-48 w-48 animate-pulse rounded-full bg-latte" />
+          </div>
+        ) : (
+          <CategoryPieChart
+            title="Budget by Category"
+            items={budgetPieItems}
+            emptyMessage="Set a budget limit above to see how your budget is split across categories."
+          />
+        )}
 
         {limitFormOpen && (
           <BudgetLimitForm

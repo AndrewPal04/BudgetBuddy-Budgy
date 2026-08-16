@@ -18,25 +18,36 @@ export const CATEGORICAL_PALETTE = [
 // Neutral, deliberately outside the categorical set so it never impersonates a series.
 export const OTHER_SLICE_COLOR = '#A8A6A0'
 
-export interface PieSlice {
+export interface PieInputItem {
   name: string
   value: number
+  /** Optional extra line shown in the tooltip (e.g. "$120 spent (60%)"). */
+  detail?: string
+}
+
+export interface PieSlice extends PieInputItem {
   isOther?: boolean
 }
 
 const MAX_SLICES = CATEGORICAL_PALETTE.length - 1
 
 /** Groups by name, sorts descending, and folds anything past the token ceiling into "Other". */
-export function buildPieSlices(items: { name: string; value: number }[]): PieSlice[] {
-  const grouped = new Map<string, number>()
+export function buildPieSlices(items: PieInputItem[]): PieSlice[] {
+  const grouped = new Map<string, { value: number; detail?: string }>()
   for (const item of items) {
     if (item.value <= 0) continue
-    grouped.set(item.name, (grouped.get(item.name) ?? 0) + item.value)
+    const existing = grouped.get(item.name)
+    grouped.set(item.name, {
+      value: (existing?.value ?? 0) + item.value,
+      detail: item.detail ?? existing?.detail,
+    })
   }
 
-  const sorted = Array.from(grouped, ([name, value]) => ({ name, value })).sort(
-    (a, b) => b.value - a.value,
-  )
+  const sorted = Array.from(grouped, ([name, entry]) => ({
+    name,
+    value: entry.value,
+    detail: entry.detail,
+  })).sort((a, b) => b.value - a.value)
 
   if (sorted.length <= MAX_SLICES) return sorted
 

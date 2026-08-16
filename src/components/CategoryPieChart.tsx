@@ -1,5 +1,10 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { buildPieSlices, CATEGORICAL_PALETTE, OTHER_SLICE_COLOR } from '../lib/chartPalette'
+import {
+  buildPieSlices,
+  CATEGORICAL_PALETTE,
+  OTHER_SLICE_COLOR,
+  type PieInputItem,
+} from '../lib/chartPalette'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
@@ -11,6 +16,7 @@ const RADIAN = Math.PI / 180
 interface PieTooltipPayloadEntry {
   name?: string
   value?: number
+  payload?: { detail?: string }
 }
 
 function PieTooltip({
@@ -22,12 +28,14 @@ function PieTooltip({
 }) {
   if (!active || !payload || payload.length === 0) return null
   const entry = payload[0]
+  const detail = entry.payload?.detail
   return (
     <div className="rounded-lg border border-latte bg-white px-3 py-2 shadow-sm">
       <p className="text-sm font-semibold text-espresso">
         {currencyFormatter.format(entry.value ?? 0)}
       </p>
       <p className="text-xs text-caramel">{entry.name}</p>
+      {detail && <p className="mt-1 text-xs text-espresso">{detail}</p>}
     </div>
   )
 }
@@ -54,7 +62,7 @@ interface PieLabelProps {
 
 interface CategoryPieChartProps {
   title: string
-  items: { name: string; value: number }[]
+  items: PieInputItem[]
   emptyMessage: string
 }
 
