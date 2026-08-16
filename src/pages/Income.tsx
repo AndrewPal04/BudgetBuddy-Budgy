@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import IncomeForm from '../components/IncomeForm'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useIncome, type IncomeInput } from '../hooks/useIncome'
 import type { IncomeRow } from '../types/database'
 
@@ -15,6 +16,7 @@ function Income() {
   const [formOpen, setFormOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<IncomeRow | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<IncomeRow | null>(null)
 
   function openAddForm() {
     setEditingEntry(null)
@@ -43,6 +45,12 @@ function Income() {
     setDeletingId(id)
     await deleteIncome(id)
     setDeletingId(null)
+  }
+
+  async function confirmDelete() {
+    if (!confirmDeleteEntry) return
+    await handleDelete(confirmDeleteEntry.id)
+    setConfirmDeleteEntry(null)
   }
 
   return (
@@ -106,7 +114,7 @@ function Income() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleDelete(entry.id)}
+                  onClick={() => setConfirmDeleteEntry(entry)}
                   disabled={deletingId === entry.id}
                   className="rounded-full border border-latte px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
                 >
@@ -117,6 +125,19 @@ function Income() {
           ))}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteEntry !== null}
+        title="Delete this income source?"
+        message={
+          confirmDeleteEntry
+            ? `"${confirmDeleteEntry.source_name}" will be permanently removed. This can't be undone.`
+            : ''
+        }
+        loading={deletingId === confirmDeleteEntry?.id}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setConfirmDeleteEntry(null)}
+      />
     </div>
   )
 }

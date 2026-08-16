@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ExpenseForm from '../components/ExpenseForm'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useExpenses, type ExpenseInput } from '../hooks/useExpenses'
 import type { ExpenseRow } from '../types/database'
 
@@ -15,6 +16,7 @@ function Expenses() {
   const [formOpen, setFormOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<ExpenseRow | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<ExpenseRow | null>(null)
 
   function openAddForm() {
     setEditingEntry(null)
@@ -43,6 +45,12 @@ function Expenses() {
     setDeletingId(id)
     await deleteExpense(id)
     setDeletingId(null)
+  }
+
+  async function confirmDelete() {
+    if (!confirmDeleteEntry) return
+    await handleDelete(confirmDeleteEntry.id)
+    setConfirmDeleteEntry(null)
   }
 
   return (
@@ -121,7 +129,7 @@ function Expenses() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleDelete(entry.id)}
+                  onClick={() => setConfirmDeleteEntry(entry)}
                   disabled={deletingId === entry.id}
                   className="rounded-full border border-latte px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
                 >
@@ -132,6 +140,19 @@ function Expenses() {
           ))}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteEntry !== null}
+        title="Delete this expense?"
+        message={
+          confirmDeleteEntry
+            ? `"${confirmDeleteEntry.name}" will be permanently removed. This can't be undone.`
+            : ''
+        }
+        loading={deletingId === confirmDeleteEntry?.id}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setConfirmDeleteEntry(null)}
+      />
     </div>
   )
 }

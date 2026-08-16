@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom'
 import StatTile from '../components/StatTile'
 import CategoryPieChart from '../components/CategoryPieChart'
 import SavingsTrendChart from '../components/SavingsTrendChart'
+import OnboardingChecklist from '../components/OnboardingChecklist'
 import { useIncome } from '../hooks/useIncome'
 import { useExpenses } from '../hooks/useExpenses'
 import { useSavingsSnapshots } from '../hooks/useSavingsSnapshots'
+import { useSavingsGoals } from '../hooks/useSavingsGoals'
 import { monthlyExpenseTotal, monthlyIncomeTotal, normalizeIncomeToMonthly } from '../lib/budgetMath'
 import { buildSavingsProjection } from '../lib/savingsMath'
 
@@ -23,6 +25,7 @@ function Home() {
   const { entries: income, loading: incomeLoading } = useIncome()
   const { entries: expenses, loading: expensesLoading } = useExpenses()
   const { snapshots, loading: snapshotsLoading } = useSavingsSnapshots()
+  const { goals, loading: goalsLoading } = useSavingsGoals()
 
   const loading = incomeLoading || expensesLoading
   const monthlyIncome = monthlyIncomeTotal(income)
@@ -35,6 +38,14 @@ function Home() {
 
   return (
     <div className="flex flex-col gap-8">
+      {!loading && !goalsLoading && (
+        <OnboardingChecklist
+          hasIncome={income.length > 0}
+          hasExpense={expenses.length > 0}
+          hasGoal={goals.length > 0}
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatTile
           label="Amount Spent"

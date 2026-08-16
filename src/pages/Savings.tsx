@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import SavingsTrendChart from '../components/SavingsTrendChart'
 import SavingsGoalForm from '../components/SavingsGoalForm'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useSavingsGoals, type SavingsGoalInput } from '../hooks/useSavingsGoals'
 import { useSavingsSnapshots } from '../hooks/useSavingsSnapshots'
 import { useIncome } from '../hooks/useIncome'
@@ -22,6 +23,7 @@ function Savings() {
   const [formOpen, setFormOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState<SavingsGoalRow | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteGoal, setConfirmDeleteGoal] = useState<SavingsGoalRow | null>(null)
 
   const chartLoading = incomeLoading || expensesLoading || snapshotsLoading
   const monthlyRate = monthlyIncomeTotal(income) - monthlyExpenseTotal(expenses)
@@ -53,6 +55,12 @@ function Savings() {
     setDeletingId(id)
     await deleteGoal(id)
     setDeletingId(null)
+  }
+
+  async function confirmDelete() {
+    if (!confirmDeleteGoal) return
+    await handleDelete(confirmDeleteGoal.id)
+    setConfirmDeleteGoal(null)
   }
 
   return (
@@ -138,7 +146,7 @@ function Savings() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleDelete(goal.id)}
+                        onClick={() => setConfirmDeleteGoal(goal)}
                         disabled={deletingId === goal.id}
                         className="rounded-full border border-latte px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
                       >
@@ -170,6 +178,19 @@ function Savings() {
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmDeleteGoal !== null}
+        title="Delete this savings goal?"
+        message={
+          confirmDeleteGoal
+            ? `"${confirmDeleteGoal.name}" will be permanently removed. This can't be undone.`
+            : ''
+        }
+        loading={deletingId === confirmDeleteGoal?.id}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setConfirmDeleteGoal(null)}
+      />
     </div>
   )
 }
