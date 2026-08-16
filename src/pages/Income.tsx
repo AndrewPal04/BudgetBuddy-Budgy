@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import IncomeForm from '../components/IncomeForm'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useIncome, type IncomeInput } from '../hooks/useIncome'
 import type { IncomeRow } from '../types/database'
+import { downloadCsv } from '../lib/csv'
+import { sortByField, type SortOption } from '../lib/listSort'
 
 const FREQUENCY_LABEL: Record<IncomeRow['frequency'], string> = {
   monthly: 'Monthly',
@@ -11,12 +13,32 @@ const FREQUENCY_LABEL: Record<IncomeRow['frequency'], string> = {
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
+const SORT_OPTIONS: SortOption<IncomeRow>[] = [
+  { value: 'created_desc', label: 'Date added (newest)', field: 'created_at', direction: 'desc' },
+  { value: 'created_asc', label: 'Date added (oldest)', field: 'created_at', direction: 'asc' },
+  { value: 'name_asc', label: 'Name (A–Z)', field: 'source_name', direction: 'asc' },
+  { value: 'name_desc', label: 'Name (Z–A)', field: 'source_name', direction: 'desc' },
+  { value: 'amount_desc', label: 'Amount (high–low)', field: 'amount', direction: 'desc' },
+  { value: 'amount_asc', label: 'Amount (low–high)', field: 'amount', direction: 'asc' },
+]
+
 function Income() {
   const { entries, loading, error, addIncome, updateIncome, deleteIncome } = useIncome()
   const [formOpen, setFormOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<IncomeRow | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<IncomeRow | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortValue, setSortValue] = useState(SORT_OPTIONS[0].value)
+
+  const visibleEntries = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    const filtered = query
+      ? entries.filter((entry) => entry.source_name.toLowerCase().includes(query))
+      : entries
+    const sortOption = SORT_OPTIONS.find((option) => option.value === sortValue) ?? SORT_OPTIONS[0]
+    return sortByField(filtered, sortOption.field, sortOption.direction)
+  }, [entries, searchQuery, sortValue])
 
   function openAddForm() {
     setEditingEntry(null)
@@ -53,6 +75,19 @@ function Income() {
     setConfirmDeleteEntry(null)
   }
 
+  function handleExport() {
+    downloadCsv(
+      'budgy-income.csv',
+      ['Source', 'Amount', 'Frequency', 'Date added'],
+      visibleEntries.map((entry) => [
+        entry.source_name,
+        entry.amount,
+        FREQUENCY_LABEL[entry.frequency],
+        entry.created_at.slice(0, 10),
+      ]),
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -87,13 +122,45 @@ function Income() {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
+      {entries.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by source…"
+            className="min-w-[200px] flex-1 rounded-lg border border-latte bg-white px-3 py-2 text-sm text-espresso outline-none focus:border-caramel"
+          />
+          <select
+            value={sortValue}
+            onChange={(event) => setSortValue(event.target.value)}
+            className="rounded-lg border border-latte bg-white px-3 py-2 text-sm text-espresso outline-none focus:border-caramel"
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleExport}
+            className="rounded-full border border-latte px-4 py-2 text-sm font-medium text-espresso transition-colors hover:bg-latte"
+          >
+            Export CSV
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-caramel">Loading income…</p>
       ) : entries.length === 0 ? (
         <p className="text-caramel">No income yet — add your first source above.</p>
+      ) : visibleEntries.length === 0 ? (
+        <p className="text-caramel">No income sources match &quot;{searchQuery}&quot;.</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {entries.map((entry) => (
+          {visibleEntries.map((entry) => (
             <li
               key={entry.id}
               className="flex items-center justify-between rounded-xl border border-latte bg-cream px-4 py-3"

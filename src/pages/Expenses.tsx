@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import ExpenseForm from '../components/ExpenseForm'
 import BudgetLimitForm from '../components/BudgetLimitForm'
 import CategoryPieChart from '../components/CategoryPieChart'
@@ -6,8 +6,10 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { useExpenses, type ExpenseInput } from '../hooks/useExpenses'
 import { useBudgetLimits } from '../hooks/useBudgetLimits'
 import type { BudgetLimitRow, ExpenseRow } from '../types/database'
-import { CATEGORY_LABELS } from '../lib/expenseCategories'
+import { CATEGORY_LABELS, CATEGORY_VALUES } from '../lib/expenseCategories'
 import { monthlyCategorySpend } from '../lib/budgetMath'
+import { downloadCsv } from '../lib/csv'
+import { sortByField, type SortOption } from '../lib/listSort'
 
 const BILLING_CYCLE_LABEL: Record<'monthly' | 'yearly', string> = {
   monthly: 'Monthly',
@@ -17,12 +19,35 @@ const BILLING_CYCLE_LABEL: Record<'monthly' | 'yearly', string> = {
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const WARNING_THRESHOLD = 0.8
 
+const SORT_OPTIONS: SortOption<ExpenseRow>[] = [
+  { value: 'created_desc', label: 'Date added (newest)', field: 'created_at', direction: 'desc' },
+  { value: 'created_asc', label: 'Date added (oldest)', field: 'created_at', direction: 'asc' },
+  { value: 'name_asc', label: 'Name (A–Z)', field: 'name', direction: 'asc' },
+  { value: 'name_desc', label: 'Name (Z–A)', field: 'name', direction: 'desc' },
+  { value: 'amount_desc', label: 'Amount (high–low)', field: 'amount', direction: 'desc' },
+  { value: 'amount_asc', label: 'Amount (low–high)', field: 'amount', direction: 'asc' },
+]
+
 function Expenses() {
   const { entries, loading, error, addExpense, updateExpense, deleteExpense } = useExpenses()
   const [formOpen, setFormOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<ExpenseRow | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<ExpenseRow | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<ExpenseRow['category'] | 'all'>('all')
+  const [sortValue, setSortValue] = useState(SORT_OPTIONS[0].value)
+
+  const visibleEntries = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    const filtered = entries.filter((entry) => {
+      const matchesQuery = query ? entry.name.toLowerCase().includes(query) : true
+      const matchesCategory = categoryFilter === 'all' ? true : entry.category === categoryFilter
+      return matchesQuery && matchesCategory
+    })
+    const sortOption = SORT_OPTIONS.find((option) => option.value === sortValue) ?? SORT_OPTIONS[0]
+    return sortByField(filtered, sortOption.field, sortOption.direction)
+  }, [entries, searchQuery, categoryFilter, sortValue])
 
   const {
     limits,
@@ -69,6 +94,22 @@ function Expenses() {
     if (!confirmDeleteEntry) return
     await handleDelete(confirmDeleteEntry.id)
     setConfirmDeleteEntry(null)
+  }
+
+  function handleExport() {
+    downloadCsv(
+      'budgy-expenses.csv',
+      ['Name', 'Amount', 'Type', 'Category', 'Billing cycle', 'Billing date', 'Date added'],
+      visibleEntries.map((entry) => [
+        entry.name,
+        entry.amount,
+        entry.type === 'subscription' ? 'Subscription' : 'One-time',
+        CATEGORY_LABELS[entry.category],
+        entry.billing_cycle ? BILLING_CYCLE_LABEL[entry.billing_cycle] : '',
+        entry.billing_date ?? '',
+        entry.created_at.slice(0, 10),
+      ]),
+    )
   }
 
   function openAddLimitForm() {
@@ -152,13 +193,59 @@ function Expenses() {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
+        {entries.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search expenses…"
+              className="min-w-[200px] flex-1 rounded-lg border border-latte bg-white px-3 py-2 text-sm text-espresso outline-none focus:border-caramel"
+            />
+            <select
+              value={categoryFilter}
+              onChange={(event) =>
+                setCategoryFilter(event.target.value as ExpenseRow['category'] | 'all')
+              }
+              className="rounded-lg border border-latte bg-white px-3 py-2 text-sm text-espresso outline-none focus:border-caramel"
+            >
+              <option value="all">All categories</option>
+              {CATEGORY_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {CATEGORY_LABELS[value]}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortValue}
+              onChange={(event) => setSortValue(event.target.value)}
+              className="rounded-lg border border-latte bg-white px-3 py-2 text-sm text-espresso outline-none focus:border-caramel"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="rounded-full border border-latte px-4 py-2 text-sm font-medium text-espresso transition-colors hover:bg-latte"
+            >
+              Export CSV
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <p className="text-caramel">Loading expenses…</p>
         ) : entries.length === 0 ? (
           <p className="text-caramel">No expenses yet — add your first one above.</p>
+        ) : visibleEntries.length === 0 ? (
+          <p className="text-caramel">No expenses match your search/filter.</p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {entries.map((entry) => (
+            {visibleEntries.map((entry) => (
               <li
                 key={entry.id}
                 className="flex items-center justify-between rounded-xl border border-latte bg-cream px-4 py-3"
