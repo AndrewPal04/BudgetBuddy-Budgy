@@ -34,6 +34,9 @@ export type ExpenseRow = {
   type: ExpenseType
   billing_cycle: BillingCycle | null
   category: ExpenseCategory
+  /** Anchor date this subscription bills on (day-of-month/day-of-year) — used to
+   * project the next renewal. Null for one-time expenses and un-set subscriptions. */
+  billing_date: string | null
   created_at: string
 }
 

@@ -3,12 +3,14 @@ import StatTile from '../components/StatTile'
 import CategoryPieChart from '../components/CategoryPieChart'
 import SavingsTrendChart from '../components/SavingsTrendChart'
 import OnboardingChecklist from '../components/OnboardingChecklist'
+import UpcomingBills from '../components/UpcomingBills'
 import { useIncome } from '../hooks/useIncome'
 import { useExpenses } from '../hooks/useExpenses'
 import { useSavingsSnapshots } from '../hooks/useSavingsSnapshots'
 import { useSavingsGoals } from '../hooks/useSavingsGoals'
 import { monthlyExpenseTotal, monthlyIncomeTotal, normalizeIncomeToMonthly } from '../lib/budgetMath'
 import { buildSavingsProjection } from '../lib/savingsMath'
+import { buildUpcomingBills } from '../lib/upcomingBills'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
@@ -35,6 +37,7 @@ function Home() {
   const savingsLoading = loading || snapshotsLoading
   const baseline = snapshots.length > 0 ? snapshots[snapshots.length - 1].amount : 0
   const projection = buildSavingsProjection(baseline, amountSaved)
+  const upcomingBills = buildUpcomingBills(expenses)
 
   return (
     <div className="flex flex-col gap-8">
@@ -87,6 +90,15 @@ function Home() {
           </>
         )}
       </div>
+
+      {loading ? (
+        <div className="rounded-2xl border border-latte bg-cream p-6">
+          <div className="h-5 w-40 animate-pulse rounded bg-latte" />
+          <div className="mt-4 h-24 animate-pulse rounded-xl bg-latte" />
+        </div>
+      ) : (
+        <UpcomingBills bills={upcomingBills} />
+      )}
 
       <div className="rounded-2xl border border-latte bg-cream p-6">
         <div className="flex items-center justify-between">

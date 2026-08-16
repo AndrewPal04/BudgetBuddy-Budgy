@@ -139,6 +139,7 @@ function Expenses() {
                     amount: editingEntry.amount,
                     type: editingEntry.type,
                     billing_cycle: editingEntry.billing_cycle ?? undefined,
+                    billing_date: editingEntry.billing_date ?? undefined,
                     category: editingEntry.category,
                   }
                 : undefined

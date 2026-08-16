@@ -9,6 +9,7 @@ export interface ExpenseInput {
   type: ExpenseType
   billing_cycle: BillingCycle | null
   category: ExpenseCategory
+  billing_date: string | null
 }
 
 interface MutationResult {

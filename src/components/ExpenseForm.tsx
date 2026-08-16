@@ -11,6 +11,7 @@ const expenseSchema = z
     amount: z.coerce.number().positive('Amount must be greater than 0'),
     type: z.enum(['one_time', 'subscription']),
     billing_cycle: z.enum(['monthly', 'yearly']).optional(),
+    billing_date: z.string().optional(),
     category: z.enum(CATEGORY_VALUES),
   })
   .superRefine((data, ctx) => {
@@ -19,6 +20,13 @@ const expenseSchema = z
         code: 'custom',
         message: 'Choose a billing cycle for this subscription',
         path: ['billing_cycle'],
+      })
+    }
+    if (data.type === 'subscription' && !data.billing_date) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Enter a date this subscription bills on',
+        path: ['billing_date'],
       })
     }
   })
@@ -31,6 +39,7 @@ export interface ExpenseFormDefaults {
   amount: number
   type: ExpenseFormValues['type']
   billing_cycle?: ExpenseFormValues['billing_cycle']
+  billing_date?: string
   category: ExpenseFormValues['category']
 }
 
@@ -85,6 +94,7 @@ function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: Expense
       amount: values.amount,
       type: values.type,
       billing_cycle: values.type === 'subscription' ? (values.billing_cycle ?? null) : null,
+      billing_date: values.type === 'subscription' ? (values.billing_date ?? null) : null,
       category: values.category,
     })
     if (result.error) {
@@ -181,6 +191,22 @@ function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: Expense
           </div>
           {errors.billing_cycle && (
             <p className="text-sm text-red-600">{errors.billing_cycle.message}</p>
+          )}
+
+          <label htmlFor="billing_date" className="mt-3 text-sm font-medium text-espresso">
+            Billing date
+          </label>
+          <input
+            id="billing_date"
+            type="date"
+            {...register('billing_date')}
+            className="w-fit rounded-lg border border-latte bg-white px-3 py-2 text-espresso outline-none focus:border-caramel"
+          />
+          <p className="text-xs text-caramel">
+            Any date this bills on — we&apos;ll track the next renewal automatically.
+          </p>
+          {errors.billing_date && (
+            <p className="text-sm text-red-600">{errors.billing_date.message}</p>
           )}
         </div>
       )}
