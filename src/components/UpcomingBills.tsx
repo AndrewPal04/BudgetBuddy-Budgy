@@ -30,8 +30,8 @@ function UpcomingBills({ bills }: UpcomingBillsProps) {
 
       {bills.length === 0 ? (
         <p className="mt-4 text-sm text-caramel">
-          No upcoming bills tracked yet — add a billing date to your subscriptions to see them
-          here.
+          No upcoming bills tracked yet — add a billing date to your recurring expenses to see
+          them here.
         </p>
       ) : (
         <ul className="mt-4 flex flex-col gap-2">

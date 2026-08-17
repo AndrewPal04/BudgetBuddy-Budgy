@@ -103,7 +103,7 @@ function Expenses() {
       visibleEntries.map((entry) => [
         entry.name,
         entry.amount,
-        entry.type === 'subscription' ? 'Subscription' : 'One-time',
+        entry.type === 'subscription' ? 'Recurring' : 'One-time',
         CATEGORY_LABELS[entry.category],
         entry.billing_cycle ? BILLING_CYCLE_LABEL[entry.billing_cycle] : '',
         entry.billing_date ?? '',
@@ -260,7 +260,7 @@ function Expenses() {
                           : 'border border-latte text-caramel'
                       }`}
                     >
-                      {entry.type === 'subscription' ? 'Subscription' : 'One-time'}
+                      {entry.type === 'subscription' ? 'Recurring' : 'One-time'}
                     </span>
                     <span className="rounded-full border border-latte px-2 py-0.5 text-xs font-medium text-caramel">
                       {CATEGORY_LABELS[entry.category]}

@@ -52,7 +52,7 @@ interface ExpenseFormProps {
 
 const TYPE_OPTIONS = [
   { value: 'one_time', label: 'One-time' },
-  { value: 'subscription', label: 'Subscription' },
+  { value: 'subscription', label: 'Recurring' },
 ] as const
 
 const BILLING_CYCLE_OPTIONS = [

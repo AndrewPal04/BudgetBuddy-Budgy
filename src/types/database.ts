@@ -6,6 +6,7 @@ export type ExpenseCategory =
   | 'groceries'
   | 'transportation'
   | 'utilities'
+  | 'bill'
   | 'subscriptions'
   | 'entertainment'
   | 'dining_out'

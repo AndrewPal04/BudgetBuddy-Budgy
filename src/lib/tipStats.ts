@@ -43,8 +43,8 @@ export function buildPercentStats(income: IncomeRow[], expenses: ExpenseRow[]): 
 
   if (subscriptionMonthly > 0) {
     stats.push({
-      label: 'Subscriptions',
-      value: `Subscriptions make up ${percentOf(subscriptionMonthly, monthlyIncome).toFixed(0)}% of your monthly income.`,
+      label: 'Recurring expenses',
+      value: `Recurring expenses make up ${percentOf(subscriptionMonthly, monthlyIncome).toFixed(0)}% of your monthly income.`,
     })
   }
 

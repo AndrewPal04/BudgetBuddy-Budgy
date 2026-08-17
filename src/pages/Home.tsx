@@ -53,7 +53,7 @@ function Home() {
         <StatTile
           label="Amount Spent"
           value={currencyFormatter.format(amountSpent)}
-          subtitle="Monthly subscriptions + one-time expenses logged"
+          subtitle="Monthly recurring + one-time expenses logged"
           to="/expenses"
           loading={loading}
         />
