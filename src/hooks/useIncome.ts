@@ -1,28 +1,50 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
-import type { IncomeFrequency, IncomeRow } from '../types/database'
+import type { IncomeAllocationRow, IncomeFrequency, IncomeRow } from '../types/database'
+
+export interface IncomeAllocationInput {
+  account_id: string
+  amount: number
+}
 
 export interface IncomeInput {
   source_name: string
   amount: number
   frequency: IncomeFrequency
+  allocations: IncomeAllocationInput[]
 }
+
+export type IncomeEntry = IncomeRow & { allocations: IncomeAllocationRow[] }
 
 interface MutationResult {
   error: string | null
 }
 
-async function fetchIncome(): Promise<IncomeRow[]> {
+async function fetchIncome(): Promise<IncomeEntry[]> {
   if (!supabase) return []
-  const { data, error } = await supabase
-    .from('income')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const [incomeResult, allocationsResult] = await Promise.all([
+    supabase.from('income').select('*').order('created_at', { ascending: false }),
+    supabase.from('income_allocations').select('*'),
+  ])
 
-  if (error) throw new Error(error.message)
+  if (incomeResult.error) throw new Error(incomeResult.error.message)
+  if (allocationsResult.error) throw new Error(allocationsResult.error.message)
+
+  const allocationsByIncomeId = new Map<string, IncomeAllocationRow[]>()
+  for (const row of allocationsResult.data ?? []) {
+    const allocation: IncomeAllocationRow = { ...row, amount: Number(row.amount) }
+    const list = allocationsByIncomeId.get(allocation.income_id) ?? []
+    list.push(allocation)
+    allocationsByIncomeId.set(allocation.income_id, list)
+  }
+
   // Postgres numeric columns come back as strings over PostgREST.
-  return (data ?? []).map((row) => ({ ...row, amount: Number(row.amount) }))
+  return (incomeResult.data ?? []).map((row) => ({
+    ...row,
+    amount: Number(row.amount),
+    allocations: allocationsByIncomeId.get(row.id) ?? [],
+  }))
 }
 
 export function useIncome() {
@@ -36,19 +58,64 @@ export function useIncome() {
     enabled: Boolean(supabase && user),
   })
 
+  async function invalidate() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({ queryKey: ['accounts', user?.id] }),
+    ])
+  }
+
   async function addIncome(input: IncomeInput): Promise<MutationResult> {
     if (!supabase || !user) return { error: 'You must be signed in.' }
-    const { error } = await supabase.from('income').insert({ ...input, user_id: user.id })
+    const { allocations, ...incomeFields } = input
+    const { data, error } = await supabase
+      .from('income')
+      .insert({ ...incomeFields, user_id: user.id })
+      .select('id')
+      .single()
     if (error) return { error: error.message }
-    await queryClient.invalidateQueries({ queryKey })
+
+    if (allocations.length > 0) {
+      const { error: allocationError } = await supabase.from('income_allocations').insert(
+        allocations.map((allocation) => ({
+          income_id: data.id,
+          account_id: allocation.account_id,
+          amount: allocation.amount,
+          user_id: user.id,
+        })),
+      )
+      if (allocationError) return { error: allocationError.message }
+    }
+
+    await invalidate()
     return { error: null }
   }
 
   async function updateIncome(id: string, input: IncomeInput): Promise<MutationResult> {
-    if (!supabase) return { error: 'You must be signed in.' }
-    const { error } = await supabase.from('income').update(input).eq('id', id)
+    if (!supabase || !user) return { error: 'You must be signed in.' }
+    const { allocations, ...incomeFields } = input
+    const { error } = await supabase.from('income').update(incomeFields).eq('id', id)
     if (error) return { error: error.message }
-    await queryClient.invalidateQueries({ queryKey })
+
+    const { error: deleteError } = await supabase
+      .from('income_allocations')
+      .delete()
+      .eq('income_id', id)
+    if (deleteError) return { error: deleteError.message }
+
+    if (allocations.length > 0) {
+      const { error: insertError } = await supabase.from('income_allocations').insert(
+        allocations.map((allocation) => ({
+          income_id: id,
+          account_id: allocation.account_id,
+          amount: allocation.amount,
+          user_id: user.id,
+        })),
+      )
+      if (insertError) return { error: insertError.message }
+    }
+
+    await invalidate()
     return { error: null }
   }
 
@@ -56,7 +123,7 @@ export function useIncome() {
     if (!supabase) return { error: 'You must be signed in.' }
     const { error } = await supabase.from('income').delete().eq('id', id)
     if (error) return { error: error.message }
-    await queryClient.invalidateQueries({ queryKey })
+    await invalidate()
     return { error: null }
   }
 

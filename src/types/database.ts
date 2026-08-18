@@ -76,6 +76,15 @@ export type AccountRow = {
   created_at: string
 }
 
+export type IncomeAllocationRow = {
+  id: string
+  user_id: string
+  income_id: string
+  account_id: string
+  amount: number
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -113,6 +122,15 @@ export interface Database {
         Row: AccountRow
         Insert: Omit<AccountRow, 'id' | 'created_at'> & { id?: string; created_at?: string }
         Update: Partial<Omit<AccountRow, 'id' | 'user_id'>>
+        Relationships: []
+      }
+      income_allocations: {
+        Row: IncomeAllocationRow
+        Insert: Omit<IncomeAllocationRow, 'id' | 'created_at'> & {
+          id?: string
+          created_at?: string
+        }
+        Update: Partial<Omit<IncomeAllocationRow, 'id' | 'user_id'>>
         Relationships: []
       }
     }

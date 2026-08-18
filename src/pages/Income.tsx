@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import IncomeForm from '../components/IncomeForm'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { useIncome, type IncomeInput } from '../hooks/useIncome'
+import { useIncome, type IncomeEntry, type IncomeInput } from '../hooks/useIncome'
+import { useAccounts } from '../hooks/useAccounts'
 import type { IncomeRow } from '../types/database'
 import { downloadCsv } from '../lib/csv'
 import { sortByField, type SortOption } from '../lib/listSort'
@@ -24,10 +25,15 @@ const SORT_OPTIONS: SortOption<IncomeRow>[] = [
 
 function Income() {
   const { entries, loading, error, addIncome, updateIncome, deleteIncome } = useIncome()
+  const { accounts } = useAccounts()
+  const accountNameById = useMemo(
+    () => new Map(accounts.map((account) => [account.id, account.name])),
+    [accounts],
+  )
   const [formOpen, setFormOpen] = useState(false)
-  const [editingEntry, setEditingEntry] = useState<IncomeRow | null>(null)
+  const [editingEntry, setEditingEntry] = useState<IncomeEntry | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<IncomeRow | null>(null)
+  const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<IncomeEntry | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortValue, setSortValue] = useState(SORT_OPTIONS[0].value)
 
@@ -45,7 +51,7 @@ function Income() {
     setFormOpen(true)
   }
 
-  function openEditForm(entry: IncomeRow) {
+  function openEditForm(entry: IncomeEntry) {
     setEditingEntry(entry)
     setFormOpen(true)
   }
@@ -78,12 +84,18 @@ function Income() {
   function handleExport() {
     downloadCsv(
       'budgy-income.csv',
-      ['Source', 'Amount', 'Frequency', 'Date added'],
+      ['Source', 'Amount', 'Frequency', 'Date added', 'Accounts'],
       visibleEntries.map((entry) => [
         entry.source_name,
         entry.amount,
         FREQUENCY_LABEL[entry.frequency],
         entry.created_at.slice(0, 10),
+        entry.allocations
+          .map(
+            (allocation) =>
+              `${accountNameById.get(allocation.account_id) ?? 'Unknown account'}: ${currencyFormatter.format(allocation.amount)}`,
+          )
+          .join('; '),
       ]),
     )
   }
@@ -111,6 +123,10 @@ function Income() {
                   source_name: editingEntry.source_name,
                   amount: editingEntry.amount,
                   frequency: editingEntry.frequency,
+                  allocations: editingEntry.allocations.map((allocation) => ({
+                    account_id: allocation.account_id,
+                    amount: allocation.amount,
+                  })),
                 }
               : undefined
           }
@@ -170,6 +186,17 @@ function Income() {
                 <p className="text-sm text-caramel">
                   {currencyFormatter.format(entry.amount)} · {FREQUENCY_LABEL[entry.frequency]}
                 </p>
+                {entry.allocations.length > 0 && (
+                  <p className="mt-1 text-xs text-caramel">
+                    →{' '}
+                    {entry.allocations
+                      .map(
+                        (allocation) =>
+                          `${accountNameById.get(allocation.account_id) ?? 'Unknown account'} (${currencyFormatter.format(allocation.amount)})`,
+                      )
+                      .join(', ')}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <button
