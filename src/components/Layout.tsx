@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import ErrorBoundary from './ErrorBoundary'
 
 const NAV_LINKS = [
+  { to: '/accounts', label: 'Accounts' },
   { to: '/savings', label: 'Savings' },
   { to: '/expenses', label: 'Expenses' },
   { to: '/income', label: 'Income' },

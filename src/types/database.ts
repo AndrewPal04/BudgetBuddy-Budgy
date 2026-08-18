@@ -1,3 +1,4 @@
+export type AccountType = 'checking' | 'savings'
 export type IncomeFrequency = 'monthly' | 'biweekly'
 export type ExpenseType = 'one_time' | 'subscription'
 export type BillingCycle = 'monthly' | 'yearly'
@@ -66,6 +67,15 @@ export type BudgetLimitRow = {
   created_at: string
 }
 
+export type AccountRow = {
+  id: string
+  user_id: string
+  name: string
+  type: AccountType
+  balance: number
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -97,6 +107,12 @@ export interface Database {
         Row: BudgetLimitRow
         Insert: Omit<BudgetLimitRow, 'id' | 'created_at'> & { id?: string; created_at?: string }
         Update: Partial<Omit<BudgetLimitRow, 'id' | 'user_id'>>
+        Relationships: []
+      }
+      accounts: {
+        Row: AccountRow
+        Insert: Omit<AccountRow, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<Omit<AccountRow, 'id' | 'user_id'>>
         Relationships: []
       }
     }
