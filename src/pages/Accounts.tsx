@@ -91,6 +91,8 @@ function Accounts() {
                   name: editingAccount.name,
                   type: editingAccount.type,
                   balance: editingAccount.balance,
+                  interest_rate:
+                    editingAccount.interest_rate != null ? String(editingAccount.interest_rate) : '',
                 }
               : undefined
           }
@@ -132,6 +134,7 @@ function Accounts() {
                         <p className="font-medium text-espresso">{account.name}</p>
                         <p className="text-sm text-caramel">
                           {currencyFormatter.format(account.balance)}
+                          {account.interest_rate ? ` · ${account.interest_rate}% APR` : ''}
                         </p>
                       </div>
                       <div className="flex shrink-0 gap-2">

@@ -8,6 +8,7 @@ const accountSchema = z.object({
   name: z.string().trim().min(1, 'Account name is required'),
   type: z.enum(['checking', 'savings']),
   balance: z.coerce.number().min(0, 'Must be 0 or more'),
+  interest_rate: z.string().optional(),
 })
 
 type AccountFormInput = z.input<typeof accountSchema>
@@ -17,6 +18,7 @@ export interface AccountFormDefaults {
   name: string
   type: AccountFormValues['type']
   balance: number
+  interest_rate?: string
 }
 
 interface AccountFormProps {
@@ -35,6 +37,7 @@ const EMPTY_DEFAULTS: AccountFormDefaults = {
   name: '',
   type: 'checking',
   balance: 0,
+  interest_rate: '',
 }
 
 function AccountForm({ defaultValues, submitLabel, onSubmit, onCancel }: AccountFormProps) {
@@ -58,10 +61,21 @@ function AccountForm({ defaultValues, submitLabel, onSubmit, onCancel }: Account
   const type = watch('type')
 
   async function submit(values: AccountFormValues) {
+    let interestRate: number | null = null
+    if (values.type === 'savings' && values.interest_rate) {
+      const parsed = Number(values.interest_rate)
+      if (Number.isNaN(parsed) || parsed < 0) {
+        setError('interest_rate', { message: 'Enter a valid interest rate (0 or more)' })
+        return
+      }
+      interestRate = parsed
+    }
+
     const result = await onSubmit({
       name: values.name,
       type: values.type,
       balance: values.balance,
+      interest_rate: interestRate,
     })
     if (result.error) {
       setError('root', { message: result.error })
@@ -119,6 +133,27 @@ function AccountForm({ defaultValues, submitLabel, onSubmit, onCancel }: Account
         />
         {errors.balance && <p className="text-sm text-red-600">{errors.balance.message}</p>}
       </div>
+
+      {type === 'savings' && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="interest_rate" className="text-sm font-medium text-espresso">
+            Interest rate (APR %, optional)
+          </label>
+          <input
+            id="interest_rate"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0"
+            {...register('interest_rate')}
+            className="rounded-lg border border-latte bg-white px-3 py-2 text-espresso outline-none focus:border-caramel"
+          />
+          <p className="text-xs text-caramel">Leave blank to assume 0% growth.</p>
+          {errors.interest_rate && (
+            <p className="text-sm text-red-600">{errors.interest_rate.message}</p>
+          )}
+        </div>
+      )}
 
       {errors.root && <p className="text-sm text-red-600">{errors.root.message}</p>}
 

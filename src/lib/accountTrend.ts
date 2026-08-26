@@ -27,12 +27,20 @@ function accountMonthlyRate(account: AccountRow, income: IncomeEntry[], expenses
   return rate
 }
 
+/** Nominal APR compounded monthly. No rate set means 0% growth. */
+function accountMonthlyInterestRate(account: AccountRow): number {
+  return (account.interest_rate ?? 0) / 100 / 12
+}
+
 /**
  * Projects every account's balance across the current calendar year (Jan–Dec), one line
- * per account. Anchored so the current month equals the account's live balance; other
- * months extrapolate from it using the account's own monthly net rate — the same
- * constant-rate approach the old aggregate projection used, just scoped per account and
- * fixed to the calendar year instead of rolling forward from today.
+ * per account. Anchored so the current month equals the account's live balance.
+ *
+ * Months after today compound forward: each month's balance is the prior month's balance
+ * grown by the account's interest rate, plus its monthly net cash flow (income allocated
+ * to it minus expenses paid from it). Months before today are extrapolated backward using
+ * cash flow alone — interest isn't backdated, since we don't know what actually compounded
+ * in the past.
  */
 export function buildAccountYearlyTrend(
   accounts: AccountRow[],
@@ -44,9 +52,23 @@ export function buildAccountYearlyTrend(
   const currentMonthIndex = now.getMonth()
 
   const series = accounts.map((account) => ({ key: account.id, name: account.name }))
-  const rates = new Map(
-    accounts.map((account) => [account.id, accountMonthlyRate(account, income, expenses)]),
-  )
+
+  const valuesByAccount = new Map<string, number[]>()
+  for (const account of accounts) {
+    const rate = accountMonthlyRate(account, income, expenses)
+    const monthlyInterest = accountMonthlyInterestRate(account)
+    const values = new Array<number>(12)
+    values[currentMonthIndex] = account.balance
+
+    for (let month = currentMonthIndex - 1; month >= 0; month--) {
+      values[month] = values[month + 1] - rate
+    }
+    for (let month = currentMonthIndex + 1; month < 12; month++) {
+      values[month] = values[month - 1] * (1 + monthlyInterest) + rate
+    }
+
+    valuesByAccount.set(account.id, values)
+  }
 
   const data: AccountTrendPoint[] = []
   for (let month = 0; month < 12; month++) {
@@ -54,8 +76,7 @@ export function buildAccountYearlyTrend(
       label: new Date(year, month, 1).toLocaleDateString('en-US', { month: 'short' }),
     }
     for (const account of accounts) {
-      const rate = rates.get(account.id) ?? 0
-      point[account.id] = account.balance + rate * (month - currentMonthIndex)
+      point[account.id] = valuesByAccount.get(account.id)?.[month] ?? account.balance
     }
     data.push(point)
   }

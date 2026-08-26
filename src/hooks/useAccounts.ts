@@ -7,6 +7,7 @@ export interface AccountInput {
   name: string
   type: AccountType
   balance: number
+  interest_rate: number | null
 }
 
 interface MutationResult {
@@ -25,6 +26,7 @@ async function fetchAccounts(): Promise<AccountRow[]> {
   return (data ?? []).map((row) => ({
     ...row,
     balance: Number(row.balance),
+    interest_rate: row.interest_rate == null ? null : Number(row.interest_rate),
   }))
 }
 

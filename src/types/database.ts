@@ -74,6 +74,8 @@ export type AccountRow = {
   name: string
   type: AccountType
   balance: number
+  /** Annual interest rate (APR %), e.g. 5 for 5%. Null means 0% (no growth assumed). */
+  interest_rate: number | null
   created_at: string
 }
 
