@@ -98,6 +98,17 @@ function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: Expense
   const billingCycle = watch('billing_cycle')
 
   async function submit(values: ExpenseFormValues) {
+    let accountId: string | null = null
+    if (accounts.length === 1) {
+      accountId = accounts[0].id
+    } else if (accounts.length > 1) {
+      if (!values.account_id) {
+        setError('account_id', { message: 'Select which account this expense is paid from' })
+        return
+      }
+      accountId = values.account_id
+    }
+
     const result = await onSubmit({
       name: values.name,
       amount: values.amount,
@@ -105,7 +116,7 @@ function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: Expense
       billing_cycle: values.type === 'subscription' ? (values.billing_cycle ?? null) : null,
       billing_date: values.type === 'subscription' ? (values.billing_date ?? null) : null,
       category: values.category,
-      account_id: values.account_id ? values.account_id : null,
+      account_id: accountId,
     })
     if (result.error) {
       setError('root', { message: result.error })
@@ -162,23 +173,34 @@ function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: Expense
         </select>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="account_id" className="text-sm font-medium text-espresso">
-          Paid from account
-        </label>
-        <select
-          id="account_id"
-          {...register('account_id')}
-          className="rounded-lg border border-latte bg-white px-3 py-2 text-espresso outline-none focus:border-caramel"
-        >
-          <option value="">Not tracked</option>
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name} ({ACCOUNT_TYPE_LABEL[account.type]})
-            </option>
-          ))}
-        </select>
-      </div>
+      {accounts.length === 1 && (
+        <p className="text-sm text-caramel">
+          This will be paid from {accounts[0].name} ({ACCOUNT_TYPE_LABEL[accounts[0].type]}).
+        </p>
+      )}
+
+      {accounts.length > 1 && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="account_id" className="text-sm font-medium text-espresso">
+            Paid from account
+          </label>
+          <select
+            id="account_id"
+            {...register('account_id')}
+            className="rounded-lg border border-latte bg-white px-3 py-2 text-espresso outline-none focus:border-caramel"
+          >
+            <option value="">Select an account</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name} ({ACCOUNT_TYPE_LABEL[account.type]})
+              </option>
+            ))}
+          </select>
+          {errors.account_id && (
+            <p className="text-sm text-red-600">{errors.account_id.message}</p>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium text-espresso">Type</span>
