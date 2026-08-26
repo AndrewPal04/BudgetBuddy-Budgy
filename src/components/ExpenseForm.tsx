@@ -3,7 +3,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { ExpenseInput } from '../hooks/useExpenses'
+import { useAccounts } from '../hooks/useAccounts'
 import { CATEGORY_LABELS, CATEGORY_VALUES } from '../lib/expenseCategories'
+
+const ACCOUNT_TYPE_LABEL: Record<string, string> = {
+  checking: 'Checking',
+  savings: 'Savings',
+}
 
 const expenseSchema = z
   .object({
@@ -13,6 +19,7 @@ const expenseSchema = z
     billing_cycle: z.enum(['monthly', 'yearly']).optional(),
     billing_date: z.string().optional(),
     category: z.enum(CATEGORY_VALUES),
+    account_id: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.type === 'subscription' && !data.billing_cycle) {
@@ -41,6 +48,7 @@ export interface ExpenseFormDefaults {
   billing_cycle?: ExpenseFormValues['billing_cycle']
   billing_date?: string
   category: ExpenseFormValues['category']
+  account_id?: string
 }
 
 interface ExpenseFormProps {
@@ -68,6 +76,7 @@ const EMPTY_DEFAULTS: ExpenseFormDefaults = {
 }
 
 function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: ExpenseFormProps) {
+  const { accounts } = useAccounts()
   const {
     register,
     handleSubmit,
@@ -96,6 +105,7 @@ function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: Expense
       billing_cycle: values.type === 'subscription' ? (values.billing_cycle ?? null) : null,
       billing_date: values.type === 'subscription' ? (values.billing_date ?? null) : null,
       category: values.category,
+      account_id: values.account_id ? values.account_id : null,
     })
     if (result.error) {
       setError('root', { message: result.error })
@@ -147,6 +157,24 @@ function ExpenseForm({ defaultValues, submitLabel, onSubmit, onCancel }: Expense
           {CATEGORY_VALUES.map((value) => (
             <option key={value} value={value}>
               {CATEGORY_LABELS[value]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="account_id" className="text-sm font-medium text-espresso">
+          Paid from account
+        </label>
+        <select
+          id="account_id"
+          {...register('account_id')}
+          className="rounded-lg border border-latte bg-white px-3 py-2 text-espresso outline-none focus:border-caramel"
+        >
+          <option value="">Not tracked</option>
+          {accounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name} ({ACCOUNT_TYPE_LABEL[account.type]})
             </option>
           ))}
         </select>

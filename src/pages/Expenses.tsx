@@ -4,6 +4,7 @@ import BudgetLimitForm from '../components/BudgetLimitForm'
 import CategoryPieChart from '../components/CategoryPieChart'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useExpenses, type ExpenseInput } from '../hooks/useExpenses'
+import { useAccounts } from '../hooks/useAccounts'
 import { useBudgetLimits } from '../hooks/useBudgetLimits'
 import type { BudgetLimitRow, ExpenseRow } from '../types/database'
 import { CATEGORY_LABELS, CATEGORY_VALUES } from '../lib/expenseCategories'
@@ -30,6 +31,11 @@ const SORT_OPTIONS: SortOption<ExpenseRow>[] = [
 
 function Expenses() {
   const { entries, loading, error, addExpense, updateExpense, deleteExpense } = useExpenses()
+  const { accounts } = useAccounts()
+  const accountNameById = useMemo(
+    () => new Map(accounts.map((account) => [account.id, account.name])),
+    [accounts],
+  )
   const [formOpen, setFormOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<ExpenseRow | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -99,7 +105,7 @@ function Expenses() {
   function handleExport() {
     downloadCsv(
       'budgy-expenses.csv',
-      ['Name', 'Amount', 'Type', 'Category', 'Billing cycle', 'Billing date', 'Date added'],
+      ['Name', 'Amount', 'Type', 'Category', 'Billing cycle', 'Billing date', 'Account', 'Date added'],
       visibleEntries.map((entry) => [
         entry.name,
         entry.amount,
@@ -107,6 +113,7 @@ function Expenses() {
         CATEGORY_LABELS[entry.category],
         entry.billing_cycle ? BILLING_CYCLE_LABEL[entry.billing_cycle] : '',
         entry.billing_date ?? '',
+        entry.account_id ? (accountNameById.get(entry.account_id) ?? 'Unknown account') : '',
         entry.created_at.slice(0, 10),
       ]),
     )
@@ -182,6 +189,7 @@ function Expenses() {
                     billing_cycle: editingEntry.billing_cycle ?? undefined,
                     billing_date: editingEntry.billing_date ?? undefined,
                     category: editingEntry.category,
+                    account_id: editingEntry.account_id ?? undefined,
                   }
                 : undefined
             }
@@ -270,6 +278,9 @@ function Expenses() {
                     {currencyFormatter.format(entry.amount)}
                     {entry.type === 'subscription' && entry.billing_cycle
                       ? ` · ${BILLING_CYCLE_LABEL[entry.billing_cycle]}`
+                      : ''}
+                    {entry.account_id
+                      ? ` · ${accountNameById.get(entry.account_id) ?? 'Unknown account'}`
                       : ''}
                   </p>
                 </div>

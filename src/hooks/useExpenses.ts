@@ -10,6 +10,7 @@ export interface ExpenseInput {
   billing_cycle: BillingCycle | null
   category: ExpenseCategory
   billing_date: string | null
+  account_id: string | null
 }
 
 interface MutationResult {
@@ -39,11 +40,18 @@ export function useExpenses() {
     enabled: Boolean(supabase && user),
   })
 
+  async function invalidate() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({ queryKey: ['accounts', user?.id] }),
+    ])
+  }
+
   async function addExpense(input: ExpenseInput): Promise<MutationResult> {
     if (!supabase || !user) return { error: 'You must be signed in.' }
     const { error } = await supabase.from('expenses').insert({ ...input, user_id: user.id })
     if (error) return { error: error.message }
-    await queryClient.invalidateQueries({ queryKey })
+    await invalidate()
     return { error: null }
   }
 
@@ -51,7 +59,7 @@ export function useExpenses() {
     if (!supabase) return { error: 'You must be signed in.' }
     const { error } = await supabase.from('expenses').update(input).eq('id', id)
     if (error) return { error: error.message }
-    await queryClient.invalidateQueries({ queryKey })
+    await invalidate()
     return { error: null }
   }
 
@@ -59,7 +67,7 @@ export function useExpenses() {
     if (!supabase) return { error: 'You must be signed in.' }
     const { error } = await supabase.from('expenses').delete().eq('id', id)
     if (error) return { error: error.message }
-    await queryClient.invalidateQueries({ queryKey })
+    await invalidate()
     return { error: null }
   }
 
