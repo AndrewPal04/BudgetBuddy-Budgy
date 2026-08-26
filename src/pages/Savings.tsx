@@ -4,11 +4,12 @@ import SavingsTrendChart from '../components/SavingsTrendChart'
 import SavingsGoalForm from '../components/SavingsGoalForm'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useSavingsGoals, type SavingsGoalInput } from '../hooks/useSavingsGoals'
-import { useSavingsSnapshots } from '../hooks/useSavingsSnapshots'
 import { useIncome } from '../hooks/useIncome'
 import { useExpenses } from '../hooks/useExpenses'
+import { useAccounts } from '../hooks/useAccounts'
 import { monthlyExpenseTotal, monthlyIncomeTotal } from '../lib/budgetMath'
-import { buildSavingsProjection, isGoalReachable } from '../lib/savingsMath'
+import { isGoalReachable } from '../lib/savingsMath'
+import { buildAccountYearlyTrend } from '../lib/accountTrend'
 import type { SavingsGoalRow } from '../types/database'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -17,7 +18,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'n
 function Savings() {
   const { entries: income, loading: incomeLoading } = useIncome()
   const { entries: expenses, loading: expensesLoading } = useExpenses()
-  const { snapshots, loading: snapshotsLoading } = useSavingsSnapshots()
+  const { accounts, loading: accountsLoading } = useAccounts()
   const { goals, loading: goalsLoading, error, addGoal, updateGoal, deleteGoal } = useSavingsGoals()
 
   const [formOpen, setFormOpen] = useState(false)
@@ -25,10 +26,10 @@ function Savings() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteGoal, setConfirmDeleteGoal] = useState<SavingsGoalRow | null>(null)
 
-  const chartLoading = incomeLoading || expensesLoading || snapshotsLoading
+  const chartLoading = incomeLoading || expensesLoading || accountsLoading
   const monthlyRate = monthlyIncomeTotal(income) - monthlyExpenseTotal(expenses)
-  const baseline = snapshots.length > 0 ? snapshots[snapshots.length - 1].amount : 0
-  const projection = buildSavingsProjection(baseline, monthlyRate)
+  const currentYear = new Date().getFullYear()
+  const { data: trendData, series: trendSeries } = buildAccountYearlyTrend(accounts, income, expenses)
 
   function openAddForm() {
     setEditingGoal(null)
@@ -68,16 +69,24 @@ function Savings() {
       <div>
         <h1 className="text-2xl font-bold text-espresso">Savings</h1>
         <p className="mt-1 text-sm text-caramel">
-          Projected forward from your current monthly income minus expenses (
-          {currencyFormatter.format(monthlyRate)}/mo).
+          Each account&apos;s projected balance across {currentYear}, based on the income
+          allocated to it and the expenses paid from it.
         </p>
       </div>
 
       <div className="rounded-2xl border border-latte bg-cream p-6">
         {chartLoading ? (
           <div className="h-72 animate-pulse rounded-xl bg-latte" />
+        ) : accounts.length === 0 ? (
+          <p className="text-caramel">
+            No accounts yet —{' '}
+            <Link to="/accounts" className="font-medium underline underline-offset-2">
+              add one
+            </Link>{' '}
+            to see its balance trend here.
+          </p>
         ) : (
-          <SavingsTrendChart data={projection} />
+          <SavingsTrendChart data={trendData} series={trendSeries} />
         )}
       </div>
 

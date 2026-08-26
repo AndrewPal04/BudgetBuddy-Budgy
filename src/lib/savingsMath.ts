@@ -6,6 +6,7 @@ const PROJECTION_MONTHS = 12
 export interface SavingsProjectionPoint {
   label: string
   amount: number
+  [key: string]: number | string
 }
 
 /**
