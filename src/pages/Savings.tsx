@@ -25,11 +25,13 @@ function Savings() {
   const [editingGoal, setEditingGoal] = useState<SavingsGoalRow | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteGoal, setConfirmDeleteGoal] = useState<SavingsGoalRow | null>(null)
+  const [hideChecking, setHideChecking] = useState(false)
 
   const chartLoading = incomeLoading || expensesLoading || accountsLoading
   const monthlyRate = monthlyIncomeTotal(income) - monthlyExpenseTotal(expenses)
   const currentYear = new Date().getFullYear()
-  const { data: trendData, series: trendSeries } = buildAccountYearlyTrend(accounts, income, expenses)
+  const chartAccounts = hideChecking ? accounts.filter((account) => account.type !== 'checking') : accounts
+  const { data: trendData, series: trendSeries } = buildAccountYearlyTrend(chartAccounts, income, expenses)
 
   function openAddForm() {
     setEditingGoal(null)
@@ -75,6 +77,18 @@ function Savings() {
       </div>
 
       <div className="rounded-2xl border border-latte bg-cream p-6">
+        {!chartLoading && accounts.some((account) => account.type === 'checking') && (
+          <label className="mb-4 flex w-fit items-center gap-2 text-sm text-espresso">
+            <input
+              type="checkbox"
+              checked={hideChecking}
+              onChange={(event) => setHideChecking(event.target.checked)}
+              className="h-4 w-4 accent-espresso"
+            />
+            Hide Checking accounts
+          </label>
+        )}
+
         {chartLoading ? (
           <div className="h-72 animate-pulse rounded-xl bg-latte" />
         ) : accounts.length === 0 ? (
@@ -84,6 +98,11 @@ function Savings() {
               add one
             </Link>{' '}
             to see its balance trend here.
+          </p>
+        ) : chartAccounts.length === 0 ? (
+          <p className="text-caramel">
+            All your accounts are Checking accounts — turn off &quot;Hide Checking
+            accounts&quot; to see them.
           </p>
         ) : (
           <SavingsTrendChart data={trendData} series={trendSeries} />
