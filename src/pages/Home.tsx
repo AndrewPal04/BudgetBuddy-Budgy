@@ -41,6 +41,8 @@ function Home() {
 
   return (
     <div className="flex flex-col gap-8">
+      <h1 className="text-2xl font-bold text-espresso">Overview</h1>
+
       {!loading && !goalsLoading && (
         <OnboardingChecklist
           hasIncome={income.length > 0}
