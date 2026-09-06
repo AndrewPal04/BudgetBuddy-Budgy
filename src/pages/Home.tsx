@@ -6,10 +6,10 @@ import OnboardingChecklist from '../components/OnboardingChecklist'
 import UpcomingBills from '../components/UpcomingBills'
 import { useIncome } from '../hooks/useIncome'
 import { useExpenses } from '../hooks/useExpenses'
-import { useSavingsSnapshots } from '../hooks/useSavingsSnapshots'
+import { useAccounts } from '../hooks/useAccounts'
 import { useSavingsGoals } from '../hooks/useSavingsGoals'
 import { monthlyExpenseTotal, monthlyIncomeTotal, normalizeIncomeToMonthly } from '../lib/budgetMath'
-import { buildSavingsProjection } from '../lib/savingsMath'
+import { buildAccountYearlyTrend } from '../lib/accountTrend'
 import { buildUpcomingBills } from '../lib/upcomingBills'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -26,7 +26,7 @@ function ChartSkeleton() {
 function Home() {
   const { entries: income, loading: incomeLoading } = useIncome()
   const { entries: expenses, loading: expensesLoading } = useExpenses()
-  const { snapshots, loading: snapshotsLoading } = useSavingsSnapshots()
+  const { accounts, loading: accountsLoading } = useAccounts()
   const { goals, loading: goalsLoading } = useSavingsGoals()
 
   const loading = incomeLoading || expensesLoading
@@ -34,9 +34,8 @@ function Home() {
   const amountSpent = monthlyExpenseTotal(expenses)
   const amountSaved = monthlyIncome - amountSpent
 
-  const savingsLoading = loading || snapshotsLoading
-  const baseline = snapshots.length > 0 ? snapshots[snapshots.length - 1].amount : 0
-  const projection = buildSavingsProjection(baseline, amountSaved)
+  const savingsLoading = loading || accountsLoading
+  const { data: trendData, series: trendSeries } = buildAccountYearlyTrend(accounts, income, expenses)
   const upcomingBills = buildUpcomingBills(expenses)
 
   return (
@@ -114,9 +113,17 @@ function Home() {
         </div>
         {savingsLoading ? (
           <div className="mt-4 h-72 animate-pulse rounded-xl bg-latte" />
+        ) : accounts.length === 0 ? (
+          <p className="mt-4 text-sm text-caramel">
+            No accounts yet —{' '}
+            <Link to="/accounts" className="font-medium underline underline-offset-2">
+              add one
+            </Link>{' '}
+            to see its balance trend here.
+          </p>
         ) : (
           <div className="mt-2">
-            <SavingsTrendChart data={projection} />
+            <SavingsTrendChart data={trendData} series={trendSeries} />
           </div>
         )}
       </div>
