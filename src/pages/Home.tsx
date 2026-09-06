@@ -4,12 +4,14 @@ import CategoryPieChart from '../components/CategoryPieChart'
 import SavingsTrendChart from '../components/SavingsTrendChart'
 import OnboardingChecklist from '../components/OnboardingChecklist'
 import UpcomingBills from '../components/UpcomingBills'
+import SavingsGrowthCard from '../components/SavingsGrowthCard'
 import { useIncome } from '../hooks/useIncome'
 import { useExpenses } from '../hooks/useExpenses'
 import { useAccounts } from '../hooks/useAccounts'
 import { useSavingsGoals } from '../hooks/useSavingsGoals'
 import { monthlyExpenseTotal, monthlyIncomeTotal, normalizeIncomeToMonthly } from '../lib/budgetMath'
 import { buildAccountYearlyTrend } from '../lib/accountTrend'
+import { buildAccountGrowth } from '../lib/accountGrowth'
 import { buildUpcomingBills } from '../lib/upcomingBills'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -37,6 +39,11 @@ function Home() {
   const savingsLoading = loading || accountsLoading
   const { data: trendData, series: trendSeries } = buildAccountYearlyTrend(accounts, income, expenses)
   const upcomingBills = buildUpcomingBills(expenses)
+  const savingsAccountGrowth = buildAccountGrowth(
+    accounts.filter((account) => account.type === 'savings'),
+    income,
+    expenses,
+  )
 
   return (
     <div className="flex flex-col gap-8">
@@ -99,6 +106,15 @@ function Home() {
         </div>
       ) : (
         <UpcomingBills bills={upcomingBills} />
+      )}
+
+      {savingsLoading ? (
+        <div className="rounded-2xl border border-latte bg-cream p-6">
+          <div className="h-5 w-40 animate-pulse rounded bg-latte" />
+          <div className="mt-4 h-24 animate-pulse rounded-xl bg-latte" />
+        </div>
+      ) : (
+        <SavingsGrowthCard accounts={savingsAccountGrowth} />
       )}
 
       <div className="rounded-2xl border border-latte bg-cream p-6">
