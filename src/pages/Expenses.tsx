@@ -8,7 +8,7 @@ import { useAccounts } from '../hooks/useAccounts'
 import { useBudgetLimits } from '../hooks/useBudgetLimits'
 import type { BudgetLimitRow, ExpenseRow } from '../types/database'
 import { CATEGORY_LABELS, CATEGORY_VALUES } from '../lib/expenseCategories'
-import { monthlyCategorySpend } from '../lib/budgetMath'
+import { BUDGET_WARNING_THRESHOLD, monthlyCategorySpend } from '../lib/budgetMath'
 import { downloadCsv } from '../lib/csv'
 import { sortByField, type SortOption } from '../lib/listSort'
 
@@ -18,7 +18,6 @@ const BILLING_CYCLE_LABEL: Record<'monthly' | 'yearly', string> = {
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-const WARNING_THRESHOLD = 0.8
 
 const SORT_OPTIONS: SortOption<ExpenseRow>[] = [
   { value: 'created_desc', label: 'Date added (newest)', field: 'created_at', direction: 'desc' },
@@ -372,7 +371,7 @@ function Expenses() {
               const ratio = limit.monthly_limit > 0 ? spend / limit.monthly_limit : 0
               const progress = Math.min(100, ratio * 100)
               const barColor =
-                ratio > 1 ? 'bg-red-600' : ratio >= WARNING_THRESHOLD ? 'bg-amber-500' : 'bg-espresso'
+                ratio > 1 ? 'bg-red-600' : ratio >= BUDGET_WARNING_THRESHOLD ? 'bg-amber-500' : 'bg-espresso'
 
               return (
                 <li key={limit.id} className="rounded-xl border border-latte bg-cream px-4 py-4">
@@ -415,7 +414,7 @@ function Expenses() {
                       Over budget by {currencyFormatter.format(spend - limit.monthly_limit)} this
                       month.
                     </p>
-                  ) : ratio >= WARNING_THRESHOLD ? (
+                  ) : ratio >= BUDGET_WARNING_THRESHOLD ? (
                     <p className="mt-2 text-sm text-amber-700">
                       Getting close — {Math.round(progress)}% of this category&apos;s budget used.
                     </p>

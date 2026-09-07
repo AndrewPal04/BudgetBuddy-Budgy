@@ -2,6 +2,11 @@ import type { ExpenseRow, IncomeRow } from '../types/database'
 
 const BIWEEKLY_PAYCHECKS_PER_MONTH = 26 / 12
 
+/** Share of a budget limit at which spend counts as "getting close" (shown as a warning
+ * color) rather than well under. Shared by the budget bar chart and the limit list so a
+ * given spend level always reads the same color across the page. */
+export const BUDGET_WARNING_THRESHOLD = 0.8
+
 /** Normalizes a single income entry to a monthly figure regardless of pay frequency. */
 export function normalizeIncomeToMonthly(entry: IncomeRow): number {
   return entry.frequency === 'monthly' ? entry.amount : entry.amount * BIWEEKLY_PAYCHECKS_PER_MONTH

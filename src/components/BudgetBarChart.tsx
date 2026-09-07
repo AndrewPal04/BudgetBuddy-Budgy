@@ -1,7 +1,9 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { BUDGET_WARNING_THRESHOLD } from '../lib/budgetMath'
 
-const BROWN = '#6F4E37' // espresso — default bar color
-const OVER_LIMIT_RED = '#DC2626'
+const BROWN = '#6F4E37' // espresso — default bar color, well under limit
+const WARNING_AMBER = '#F59E0B' // amber-500 — matches the budget limit list's warning color
+const OVER_LIMIT_RED = '#DC2626' // red-600
 const LIMIT_LINE_COLOR = '#3D2B1F'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -12,8 +14,40 @@ export interface BudgetBarItem {
   limit: number
 }
 
-function isOverLimit(item: BudgetBarItem) {
-  return item.limit > 0 && item.spend >= item.limit
+type BudgetStatus = 'under' | 'warning' | 'over'
+
+/** Same threshold the budget limit list uses for its amber warning state, so a given
+ * spend level reads the same color everywhere on the page. */
+function budgetStatus(item: BudgetBarItem): BudgetStatus {
+  if (item.limit <= 0) return 'under'
+  const ratio = item.spend / item.limit
+  if (ratio >= 1) return 'over'
+  if (ratio >= BUDGET_WARNING_THRESHOLD) return 'warning'
+  return 'under'
+}
+
+const BAR_COLOR: Record<BudgetStatus, string> = {
+  under: BROWN,
+  warning: WARNING_AMBER,
+  over: OVER_LIMIT_RED,
+}
+
+const LINE_COLOR: Record<BudgetStatus, string> = {
+  under: LIMIT_LINE_COLOR,
+  warning: WARNING_AMBER,
+  over: OVER_LIMIT_RED,
+}
+
+const STATUS_TEXT_CLASS: Record<BudgetStatus, string> = {
+  under: 'text-espresso',
+  warning: 'text-amber-700',
+  over: 'text-red-600',
+}
+
+const STATUS_MESSAGE: Record<BudgetStatus, string | null> = {
+  under: null,
+  warning: 'Getting close to the limit',
+  over: 'Limit reached',
 }
 
 interface BudgetBarTooltipPayloadEntry {
@@ -30,15 +64,16 @@ function BudgetBarTooltip({
   if (!active || !payload || payload.length === 0) return null
   const item = payload[0].payload
   if (!item) return null
-  const overLimit = isOverLimit(item)
+  const status = budgetStatus(item)
+  const message = STATUS_MESSAGE[status]
 
   return (
     <div className="rounded-lg border border-latte bg-white px-3 py-2 shadow-sm">
       <p className="text-sm font-semibold text-espresso">{item.name}</p>
-      <p className={`text-sm ${overLimit ? 'text-red-600' : 'text-espresso'}`}>
+      <p className={`text-sm ${STATUS_TEXT_CLASS[status]}`}>
         {currencyFormatter.format(item.spend)} of {currencyFormatter.format(item.limit)}
       </p>
-      {overLimit && <p className="text-xs text-red-600">Limit reached</p>}
+      {message && <p className={`text-xs ${STATUS_TEXT_CLASS[status]}`}>{message}</p>}
     </div>
   )
 }
@@ -59,24 +94,16 @@ function BudgetBar(props: BudgetBarShapeProps) {
   const { x = 0, y = 0, width = 0, height = 0, payload } = props
   if (!payload) return null
 
-  const overLimit = isOverLimit(payload)
+  const status = budgetStatus(payload)
   const scale = payload.limit > 0 ? height / payload.limit : 0
   const spendHeight = Math.max(0, payload.spend * scale)
   const baseline = y + height
   const spendY = baseline - spendHeight
-  const color = overLimit ? OVER_LIMIT_RED : BROWN
 
   return (
     <g>
-      <rect x={x} y={spendY} width={width} height={spendHeight} fill={color} rx={3} />
-      <line
-        x1={x}
-        y1={y}
-        x2={x + width}
-        y2={y}
-        stroke={overLimit ? OVER_LIMIT_RED : LIMIT_LINE_COLOR}
-        strokeWidth={2}
-      />
+      <rect x={x} y={spendY} width={width} height={spendHeight} fill={BAR_COLOR[status]} rx={3} />
+      <line x1={x} y1={y} x2={x + width} y2={y} stroke={LINE_COLOR[status]} strokeWidth={2} />
     </g>
   )
 }
