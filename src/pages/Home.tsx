@@ -5,6 +5,7 @@ import SavingsTrendChart from '../components/SavingsTrendChart'
 import OnboardingChecklist from '../components/OnboardingChecklist'
 import UpcomingBills from '../components/UpcomingBills'
 import SavingsGrowthCard from '../components/SavingsGrowthCard'
+import FunFactsCard from '../components/FunFactsCard'
 import { useIncome } from '../hooks/useIncome'
 import { useExpenses } from '../hooks/useExpenses'
 import { useAccounts } from '../hooks/useAccounts'
@@ -12,6 +13,7 @@ import { useSavingsGoals } from '../hooks/useSavingsGoals'
 import { monthlyExpenseTotal, monthlyIncomeTotal, normalizeIncomeToMonthly } from '../lib/budgetMath'
 import { buildAccountYearlyTrend } from '../lib/accountTrend'
 import { buildAccountGrowth } from '../lib/accountGrowth'
+import { buildFunFacts } from '../lib/funFacts'
 import { buildUpcomingBills } from '../lib/upcomingBills'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -44,6 +46,7 @@ function Home() {
     income,
     expenses,
   )
+  const funFacts = buildFunFacts(accounts, income, expenses)
 
   return (
     <div className="flex flex-col gap-8">
@@ -73,6 +76,15 @@ function Home() {
           loading={loading}
         />
       </div>
+
+      {savingsLoading ? (
+        <div className="rounded-2xl border border-latte bg-cream p-6">
+          <div className="h-5 w-40 animate-pulse rounded bg-latte" />
+          <div className="mt-4 h-24 animate-pulse rounded-xl bg-latte" />
+        </div>
+      ) : (
+        <FunFactsCard facts={funFacts} />
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {loading ? (
