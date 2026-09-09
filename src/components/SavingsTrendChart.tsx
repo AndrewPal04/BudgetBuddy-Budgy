@@ -69,13 +69,15 @@ interface SavingsTrendChartProps {
   data: Array<Record<string, number | string>>
   /** Defaults to a single unlabeled "Savings" line with no legend (the Home page glance). */
   series?: TrendSeries[]
+  /** Tailwind height class for the chart's container. Defaults to the full-size "h-72". */
+  heightClassName?: string
 }
 
-function SavingsTrendChart({ data, series = DEFAULT_SERIES }: SavingsTrendChartProps) {
+function SavingsTrendChart({ data, series = DEFAULT_SERIES, heightClassName = 'h-72' }: SavingsTrendChartProps) {
   const showLegend = series.length > 1
 
   return (
-    <div className="h-72">
+    <div className={heightClassName}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} stroke="#E1E0D9" />

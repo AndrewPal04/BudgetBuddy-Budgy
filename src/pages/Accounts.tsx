@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import AccountForm from '../components/AccountForm'
 import ConfirmDialog from '../components/ConfirmDialog'
+import SavingsTrendChart from '../components/SavingsTrendChart'
 import { useAccounts, type AccountInput } from '../hooks/useAccounts'
+import { useIncome } from '../hooks/useIncome'
+import { useExpenses } from '../hooks/useExpenses'
+import { buildAccountYearlyTrend } from '../lib/accountTrend'
 import type { AccountRow, AccountType } from '../types/database'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -13,6 +17,9 @@ const GROUPS: { type: AccountType; title: string }[] = [
 
 function Accounts() {
   const { accounts, loading, error, addAccount, updateAccount, deleteAccount } = useAccounts()
+  const { entries: income, loading: incomeLoading } = useIncome()
+  const { entries: expenses, loading: expensesLoading } = useExpenses()
+  const chartsLoading = loading || incomeLoading || expensesLoading
 
   const [formOpen, setFormOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<AccountRow | null>(null)
@@ -125,37 +132,52 @@ function Accounts() {
                 </div>
 
                 <ul className="flex flex-col gap-4">
-                  {groupAccounts.map((account) => (
-                    <li
-                      key={account.id}
-                      className="flex items-center justify-between gap-4 rounded-xl border border-latte bg-cream px-4 py-4"
-                    >
-                      <div>
-                        <p className="font-medium text-espresso">{account.name}</p>
-                        <p className="text-sm text-caramel">
-                          {currencyFormatter.format(account.balance)}
-                          {account.interest_rate ? ` · ${account.interest_rate}% APR` : ''}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEditForm(account)}
-                          className="rounded-full border border-latte px-3 py-1.5 text-sm font-medium text-espresso transition-colors hover:bg-white"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteAccount(account)}
-                          disabled={deletingId === account.id}
-                          className="rounded-full border border-latte px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
-                        >
-                          {deletingId === account.id ? 'Deleting…' : 'Delete'}
-                        </button>
-                      </div>
-                    </li>
-                  ))}
+                  {groupAccounts.map((account) => {
+                    const { data: miniData, series: miniSeries } = buildAccountYearlyTrend(
+                      [account],
+                      income,
+                      expenses,
+                    )
+                    return (
+                      <li
+                        key={account.id}
+                        className="flex flex-col gap-3 rounded-xl border border-latte bg-cream px-4 py-4"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="font-medium text-espresso">{account.name}</p>
+                            <p className="text-sm text-caramel">
+                              {currencyFormatter.format(account.balance)}
+                              {account.interest_rate ? ` · ${account.interest_rate}% APR` : ''}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditForm(account)}
+                              className="rounded-full border border-latte px-3 py-1.5 text-sm font-medium text-espresso transition-colors hover:bg-white"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteAccount(account)}
+                              disabled={deletingId === account.id}
+                              className="rounded-full border border-latte px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
+                            >
+                              {deletingId === account.id ? 'Deleting…' : 'Delete'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {chartsLoading ? (
+                          <div className="h-40 animate-pulse rounded-xl bg-latte" />
+                        ) : (
+                          <SavingsTrendChart data={miniData} series={miniSeries} heightClassName="h-40" />
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             )
